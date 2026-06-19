@@ -1,0 +1,13 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/oapi-codegen/oapi-codegen/HEAD/configuration-schema.json
+package: oapi
+output: ../oapi/gen.go
+generate:
+  models: true
+  chi-server: true
+  strict-server: true
+output-options:
+  skip-prune: true
+import-mapping: {}
+additional-imports:
+  - package: github.com/omcrgnt/proto/gen/go/common/v1
+    alias: commonv1
