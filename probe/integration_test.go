@@ -16,17 +16,20 @@ type fakeReady struct{}
 func (fakeReady) ProbeReady(context.Context) error { return nil }
 
 func TestActuator_SDIResolve(t *testing.T) {
-	res.ResetDefault()
-	t.Cleanup(res.ResetDefault)
+	reg := res.New()
 
-	_ = res.Add(&probe.Actuator{})
-	_ = res.Add(fakeReady{})
-
-	if err := sdi.Resolve(res.Default); err != nil {
+	if err := reg.Add(&probe.Actuator{}); err != nil {
+		t.Fatal(err)
+	}
+	if err := reg.Add(fakeReady{}); err != nil {
 		t.Fatal(err)
 	}
 
-	actAny, err := res.GetOneByType(reflect.TypeOf((*probe.Actuator)(nil)))
+	if err := sdi.Resolve(reg); err != nil {
+		t.Fatal(err)
+	}
+
+	actAny, err := reg.GetOneByType(reflect.TypeOf((*probe.Actuator)(nil)))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -41,18 +44,23 @@ type failReady struct{}
 func (failReady) ProbeReady(context.Context) error { return errors.New("not ready") }
 
 func TestActuator_SDIResolveMany(t *testing.T) {
-	res.ResetDefault()
-	t.Cleanup(res.ResetDefault)
+	reg := res.New()
 
-	_ = res.Add(&probe.Actuator{})
-	_ = res.Add(fakeReady{})
-	_ = res.Add(failReady{})
-
-	if err := sdi.Resolve(res.Default); err != nil {
+	if err := reg.Add(&probe.Actuator{}); err != nil {
+		t.Fatal(err)
+	}
+	if err := reg.Add(fakeReady{}); err != nil {
+		t.Fatal(err)
+	}
+	if err := reg.Add(failReady{}); err != nil {
 		t.Fatal(err)
 	}
 
-	actAny, err := res.GetOneByType(reflect.TypeOf((*probe.Actuator)(nil)))
+	if err := sdi.Resolve(reg); err != nil {
+		t.Fatal(err)
+	}
+
+	actAny, err := reg.GetOneByType(reflect.TypeOf((*probe.Actuator)(nil)))
 	if err != nil {
 		t.Fatal(err)
 	}

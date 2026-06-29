@@ -58,3 +58,10 @@ func (a *Actuator) ProbeHealth(ctx context.Context) error {
 	}
 	return nil
 }
+
+// ActuatorConfig builds the probe actuator for res registration.
+type ActuatorConfig struct{}
+
+func (ActuatorConfig) Build() (any, error) {
+	return &Actuator{}, nil
+}

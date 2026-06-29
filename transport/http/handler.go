@@ -61,3 +61,10 @@ func (s *strictProbe) GetHealthz(ctx context.Context, _ oapi.GetHealthzRequestOb
 	}
 	return oapi.GetHealthz200TextResponse("ok"), nil
 }
+
+// HandlerConfig builds the ops HTTP handler for res registration.
+type HandlerConfig struct{}
+
+func (HandlerConfig) Build() (any, error) {
+	return &Handler{}, nil
+}

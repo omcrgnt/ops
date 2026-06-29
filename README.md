@@ -4,6 +4,8 @@ Org library for application **operations surface**: probe actuators and HTTP tra
 
 Supersedes the experimental [actuator](https://github.com/omcrgnt/actuator) repo.
 
+Stack: `res v0.20.2`, `sdi v0.20.4`, `srv-http v0.20.1`.
+
 ## Layout
 
 ```text
@@ -17,7 +19,7 @@ Each actuator:
 interface.go   # surface API (Prober: ProbeLive / ProbeReady / ProbeHealth)
 deps.go        # domain port interfaces (ProbeReadiness / ProbeLiveness / ProbeHealth)
 actuator.go    # SDI Compatible implementation
-use/use.go     # res.AddWithTags singleton (TagReplaceable for probe)
+use/use.go     # res.AddToGlobalWithTags (TagReplaceable for probe)
 ```
 
 Domain types implement `ProbeReady`, `ProbeLive`, and/or `ProbeHealth` — not bare `Ready`/`Live`/`Health`. Infra resources (e.g. one shared `db` per app) implement probe ports; repositories typically do not.
@@ -29,12 +31,12 @@ v1 aggregation is sequential fail-fast. Implementors must respect context cancel
 ```go
 import _ "github.com/omcrgnt/ops/transport/http/use"
 
-// ecfg.Parse → builder.Build → sdi.Resolve → runner.Run
+app.Run(&appResources, app.Pipeline{Registry: res.Global(), ...})
 ```
 
-Registers default probe actuator (replaceable), HTTP handler, and default ops server (`DefaultServer`, `:8080`). Shared `metrics.Recorder` — app or future `res/core/use`, not ops/use.
+Registers default probe actuator (replaceable), HTTP handler, and default ops server (`DefaultServer`, `:8080`). Shared `metrics.Recorder` — app (not ops/use).
 
-Optional override: `ophttp.Config` with `ecfg` tags for ops listen port/host; or replace default `Actuator` with explicit `res.Add` (backlog).
+Optional override: `transport/http.Config` in AppResources with `ecfg` tags for ops listen port/host; after `builder.Build`, sdi dedup removes the replaceable default.
 
 ## Codegen
 

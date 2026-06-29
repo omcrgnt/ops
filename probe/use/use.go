@@ -1,4 +1,4 @@
-// Package use registers the probe actuator singleton in res.Default.
+// Package use registers the probe actuator singleton in res.Global.
 //
 // Import for side effects:
 //
@@ -11,5 +11,5 @@ import (
 )
 
 func init() {
-	_ = res.AddWithTags(&probe.Actuator{}, res.TagReplaceable)
+	res.MustAddToGlobalWithTags(probe.ActuatorWire{}, res.TagReplaceable)
 }

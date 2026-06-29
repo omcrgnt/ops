@@ -62,24 +62,24 @@ One directory per actuator (`probe/`, future `metrics/`):
 | `interface.go` | Surface API consumed by transports (`Prober`) |
 | `deps.go` | Port interfaces implemented by domain |
 | `actuator.go` | `Deps`/`Inject`, aggregation logic — no `Config` |
-| `use/use.go` | `res.AddWithTags(&Actuator{}, TagReplaceable)` |
+| `use/use.go` | `res.AddToGlobalWithTags` (TagReplaceable) |
 
 ## Registration (`use` packages)
 
 ```text
-probe/use              → Actuator (TagReplaceable — app may override with explicit res.Add)
-transport/http/use     → Handler (TagFixed) + DefaultServer (TagReplaceable)
+probe/use              → ActuatorConfig (TagReplaceable)
+transport/http/use     → HandlerConfig (TagFixed) + DefaultServer (TagReplaceable, legacy resource until opssrv refactor)
 ```
 
-Pattern: `DefaultServer()` in init (no panic, lazy bind on Resolve); `Config.Build()` for port/host override via `builder.Build`. Dedup of replaceable default vs explicit `*systemServer` requires **pool-wide Replaceable dedup in sdi** (not deps-triggered only) — see [sdi](https://github.com/omcrgnt/sdi) backlog; no ServerAnchor.
+Pattern: library use init registers **configs** (`AddToGlobalWithTags`); AppResources + `builder.Seed` / `builder.Build` materialize Builder entries (inherits tags). `DefaultServer()` remains a pre-built resource (not Builder) until opssrv phase 2.
 
-**metrics.Recorder** — shared app dependency (srv-http One dep), **not** registered in ops/use. App `MetricsConfig` or future `res/core/use` meta pack (see backlog).
+**metrics.Recorder** — shared app dependency (srv-http One dep), **not** registered in ops/use. App AppResources field or blank-import `logger/use` / app metrics config.
 
 `transport/http/use` blank-imports `probe/use` first.
 
-Apps import `_ "github.com/omcrgnt/ops/transport/http/use"`. No mandatory `AppConfig` ops server field.
+Apps import `_ "github.com/omcrgnt/ops/transport/http/use"` and run `app.Run(&appResources, app.Pipeline{Registry: res.Global(), ...})`. No mandatory ops server field in AppResources.
 
-Override host/port/label: optional `transport/http.Config` in `AppConfig` with `ecfg` tags (`builder.Build` → sdi dedup removes replaceable default once pool-wide dedup lands in sdi).
+Override host/port/label: optional `transport/http.Config` in AppResources with `ecfg` tags; after `builder.Build`, sdi pool-wide dedup removes the replaceable `DefaultServer`.
 
 Default port **8080** is an org convention in `DefaultConfig()`, not enforced by the library. TCP bind errors (e.g. port in use) surface at **SDI Resolve** or **runner.Start**, not at import time.
 
@@ -99,25 +99,14 @@ v1 probe endpoints: no input DTO; `text/plain` responses.
 
 ## Backlog
 
-- Demo integration
-- `transport/grpc`
-- `/metrics` on ops HTTP
-- Meta `ops/use` imported from `res/core/use` (shared `metrics.Recorder`, logger, telemetry defaults)
-- `proto/ops/v1` messages when structured probes appear
-- **`ops/surface/`** — move `Prober` (and future metrics surface) when grpc/metrics consumers appear; mechanical refactor from `probe/interface.go`
-- **Probe actuator `Config` (optional)** — extend `probe/` with ecfg-friendly config (pattern like `transport/http.Config`) to tune heavy probe aggregation without replacing `Actuator`:
-  - default: sequential fail-fast (current v1 behavior);
-  - opt-in parallel per probe kind (at least `ProbeReady` / `ProbeHealth`; `ProbeLive` stays sequential);
-  - context cancel on first error or global deadline;
-  - document error policy (first error vs aggregate). Design after first real `ProbeReady`/`ProbeHealth` implementor in app or org-lib — until then latency trade-offs are speculative.
-- **SDI Many policy review** — раньше обсуждали `([]T)(nil)` строго `>= 1` implementor (0 → error). Для `probe.Actuator` сейчас разрешён пустой slice (0 → `[]T{}`). Пересмотреть: опционально **warn** при 0 (misconfig / забытый `res.Add`) вместо silent OK или hard error. См. `sdi` backlog.
-- **SDI pool-wide Replaceable dedup** — today dedup runs only for types from `Deps()` stubs. Runner-only resources (e.g. replaceable `*systemServer` + explicit `Config.Build`) need dedup by concrete type across the whole pool — no fake dep anchors. Track in sdi.
-- **srv-http defer listen** — перенести `net.Listen` из `Build()` в `Start()` so bind failures align with runner lifecycle; ops `systemServer` lazy-build workaround can shrink afterward.
-- **Org devtools repo (`taskfiles` + templates)** — отдельный репозиторий (рядом с `lint/`):
-  - shared Taskfile fragments: docker `go test` / `go-mutesting`, `pkgsite`, lint wrappers;
-  - service/repo templates (Taskfile skeleton, zero-config `use` imports, ecfg layout);
-  - подключение через Task `includes` + git URL (`?ref=vX.Y.Z`, опционально `checksum`, `remote.cache-expiry` в `.taskrc`);
-  - миграция org repos (`ops`, `sdi`, `res`, `demo`, …) с copy-paste `Taskfile.yml` на `includes` + repo-local vars (`EXTRA_MOUNTS`, `replace` paths).
+Org-wide items: [github.com/omcrgnt/backlog](https://github.com/omcrgnt/backlog)
+
+| Theme | Item |
+|-------|------|
+| ops probe follow-ups (demo, grpc, metrics, surface/) | [ops-probe-v1-followups](https://github.com/omcrgnt/backlog/blob/main/items/ops-probe-v1-followups.md) |
+| SDI Many warn / lifecycle lint | [sdi-v21-followups](https://github.com/omcrgnt/backlog/blob/main/items/sdi-v21-followups.md) |
+| srv-http defer listen | [srv-http-defer-listen](https://github.com/omcrgnt/backlog/blob/main/items/srv-http-defer-listen.md) |
+| shared Taskfiles / templates | [org-devtools-taskfiles](https://github.com/omcrgnt/backlog/blob/main/items/org-devtools-taskfiles.md) |
 
 ## References
 
