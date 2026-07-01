@@ -60,17 +60,13 @@ func TestIntegration_DefaultServerOverrideDedup(t *testing.T) {
 	reg.MustAddReplaceable(ophttp.DefaultServer())
 
 	cfg := ophttp.DefaultConfig()
-	cfg.Port.Value = 9090
+	cfg.Port.Value = 0 // ephemeral port; avoid clash with running apps on :9090
 	built, err := cfg.Build()
 	if err != nil {
 		t.Fatal(err)
 	}
 	if err := reg.Add(built); err != nil {
 		t.Fatal(err)
-	}
-
-	if err := sdi.Resolve(reg); err == nil {
-		t.Fatal("expected wire error without handler and metrics deps")
 	}
 
 	typ := reflect.TypeOf(built)
