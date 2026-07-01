@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"github.com/omcrgnt/ops/probe"
-	"github.com/omcrgnt/res"
+	"github.com/omcrgnt/res/unique"
 	"github.com/omcrgnt/sdi"
 )
 
@@ -16,11 +16,9 @@ type fakeReady struct{}
 func (fakeReady) ProbeReady(context.Context) error { return nil }
 
 func TestActuator_SDIResolve(t *testing.T) {
-	reg := res.New()
+	reg := unique.New()
 
-	if err := reg.Add(&probe.Actuator{}); err != nil {
-		t.Fatal(err)
-	}
+	reg.MustAddReplaceable(&probe.Actuator{})
 	if err := reg.Add(fakeReady{}); err != nil {
 		t.Fatal(err)
 	}
@@ -44,11 +42,9 @@ type failReady struct{}
 func (failReady) ProbeReady(context.Context) error { return errors.New("not ready") }
 
 func TestActuator_SDIResolveMany(t *testing.T) {
-	reg := res.New()
+	reg := unique.New()
 
-	if err := reg.Add(&probe.Actuator{}); err != nil {
-		t.Fatal(err)
-	}
+	reg.MustAddReplaceable(&probe.Actuator{})
 	if err := reg.Add(fakeReady{}); err != nil {
 		t.Fatal(err)
 	}

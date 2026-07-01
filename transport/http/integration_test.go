@@ -8,10 +8,12 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/omcrgnt/ops/metrics"
 	"github.com/omcrgnt/ops/probe"
 	ophttp "github.com/omcrgnt/ops/transport/http"
-	"github.com/omcrgnt/res"
+	"github.com/omcrgnt/res/unique"
 	"github.com/omcrgnt/sdi"
+	"github.com/prometheus/client_golang/prometheus"
 )
 
 type alwaysReady struct{}
@@ -19,17 +21,15 @@ type alwaysReady struct{}
 func (alwaysReady) ProbeReady(context.Context) error { return nil }
 
 func TestIntegration_ResolveAndServe(t *testing.T) {
-	reg := res.New()
+	reg := unique.New()
 
-	if err := reg.Add(&probe.Actuator{}); err != nil {
-		t.Fatal(err)
-	}
+	reg.MustAddReplaceable(&probe.Actuator{})
 	if err := reg.Add(alwaysReady{}); err != nil {
 		t.Fatal(err)
 	}
-	if err := reg.Add(&ophttp.Handler{}); err != nil {
-		t.Fatal(err)
-	}
+	reg.MustAddFixed(prometheus.NewRegistry())
+	reg.MustAddReplaceable(&metrics.Actuator{})
+	reg.MustAddFixed(&ophttp.Handler{})
 
 	if err := sdi.Resolve(reg); err != nil {
 		t.Fatal(err)
@@ -55,11 +55,9 @@ func TestIntegration_ResolveAndServe(t *testing.T) {
 }
 
 func TestIntegration_DefaultServerOverrideDedup(t *testing.T) {
-	reg := res.New()
+	reg := unique.New()
 
-	if err := reg.AddWithTags(ophttp.DefaultServer(), res.TagReplaceable); err != nil {
-		t.Fatal(err)
-	}
+	reg.MustAddReplaceable(ophttp.DefaultServer())
 
 	cfg := ophttp.DefaultConfig()
 	cfg.Port.Value = 9090
@@ -85,5 +83,31 @@ func TestIntegration_DefaultServerOverrideDedup(t *testing.T) {
 	}
 	if got != built {
 		t.Fatal("expected explicit Config.Build server to remain after dedup")
+	}
+}
+
+func TestIntegration_MetricsRoute(t *testing.T) {
+	reg := unique.New()
+	reg.MustAddReplaceable(&probe.Actuator{})
+	reg.MustAddFixed(prometheus.NewRegistry())
+	reg.MustAddReplaceable(&metrics.Actuator{})
+	reg.MustAddFixed(&ophttp.Handler{})
+
+	if err := sdi.Resolve(reg); err != nil {
+		t.Fatal(err)
+	}
+
+	hAny, err := reg.GetOneByType(reflect.TypeOf((*ophttp.Handler)(nil)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	h := hAny.(*ophttp.Handler)
+
+	req := httptest.NewRequest(http.MethodGet, "/metrics", nil)
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status %d", rec.Code)
 	}
 }

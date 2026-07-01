@@ -9,7 +9,7 @@ Blank-import the use subpackage at the app composition root:
 
 transport/http/use registers [Handler] (TagFixed), [DefaultServer] (TagReplaceable), and probe actuator via probe/use.
 
-[Config.Build] override (port/host) relies on sdi pool-wide Replaceable dedup by concrete type after builder.Build.
+[Config.Build] override (port/host) relies on sdi pool-wide Replaceable dedup by concrete type after materialize.
 
 srv-http depends on [metrics.Recorder] from slok/go-http-metrics. Ops does not register a recorder — the app provides one shared instance for all HTTP servers and metric emitters.
 

@@ -1,8 +1,10 @@
-// Package use registers probe actuator and ops HTTP transport defaults in res.Global.
+// Package use registers probe actuator and ops HTTP transport defaults in unique.Global.
 //
 // Import for side effects at the app composition root:
 //
 //	import _ "github.com/omcrgnt/ops/transport/http/use"
+//
+// Also import _ "github.com/omcrgnt/ops/metrics/use" and _ "github.com/omcrgnt/srv-http/use" for metrics.
 package use
 
 import (
@@ -13,6 +15,6 @@ import (
 )
 
 func init() {
-	unique.MustAddFixed(ophttp.HandlerWire{})
-	unique.MustAddReplaceable(ophttp.DefaultServerWire{})
+	unique.MustAddFixed(&ophttp.Handler{})
+	unique.MustAddReplaceable(ophttp.DefaultServer())
 }

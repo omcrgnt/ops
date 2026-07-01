@@ -54,3 +54,20 @@ paths:
             text/plain:
               schema:
                 type: string
+  /metrics:
+    get:
+      operationId: getMetrics
+      summary: Prometheus metrics
+      responses:
+        "200":
+          description: OK
+          content:
+            text/plain:
+              schema:
+                type: string
+        "503":
+          description: Service unavailable
+          content:
+            text/plain:
+              schema:
+                type: string

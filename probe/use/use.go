@@ -1,4 +1,4 @@
-// Package use registers the probe actuator singleton in res.Global.
+// Package use registers the probe actuator in unique.Global.
 //
 // Import for side effects:
 //
@@ -7,9 +7,9 @@ package use
 
 import (
 	"github.com/omcrgnt/ops/probe"
-	"github.com/omcrgnt/res"
+	"github.com/omcrgnt/res/unique"
 )
 
 func init() {
-	res.MustAddToGlobalWithTags(probe.ActuatorWire{}, res.TagReplaceable)
+	unique.MustAddReplaceable(&probe.Actuator{})
 }

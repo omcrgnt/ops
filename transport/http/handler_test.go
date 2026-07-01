@@ -21,6 +21,15 @@ func (m mockProber) ProbeHealth(context.Context) error {
 	return m.health
 }
 
+type mockMetricer struct {
+	body []byte
+	err  error
+}
+
+func (m mockMetricer) MetricsMetrics(context.Context) ([]byte, error) {
+	return m.body, m.err
+}
+
 func TestHandler_ProbeRoutes(t *testing.T) {
 	t.Parallel()
 
@@ -66,7 +75,7 @@ func TestHandler_ProbeRoutes(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 			h := &ophttp.Handler{}
-			h.Inject([]any{tc.mock})
+			h.Inject([]any{tc.mock, mockMetricer{}})
 
 			req := httptest.NewRequest(http.MethodGet, tc.path, nil)
 			rec := httptest.NewRecorder()

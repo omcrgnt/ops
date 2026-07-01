@@ -19,6 +19,9 @@ type ServerInterface interface {
 	// Liveness probe
 	// (GET /livez)
 	GetLivez(w http.ResponseWriter, r *http.Request)
+	// Prometheus metrics
+	// (GET /metrics)
+	GetMetrics(w http.ResponseWriter, r *http.Request)
 	// Readiness probe
 	// (GET /readyz)
 	GetReadyz(w http.ResponseWriter, r *http.Request)
@@ -37,6 +40,12 @@ func (_ Unimplemented) GetHealthz(w http.ResponseWriter, r *http.Request) {
 // Liveness probe
 // (GET /livez)
 func (_ Unimplemented) GetLivez(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Prometheus metrics
+// (GET /metrics)
+func (_ Unimplemented) GetMetrics(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -74,6 +83,20 @@ func (siw *ServerInterfaceWrapper) GetLivez(w http.ResponseWriter, r *http.Reque
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetLivez(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetMetrics operation middleware
+func (siw *ServerInterfaceWrapper) GetMetrics(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetMetrics(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -217,6 +240,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Get(options.BaseURL+"/livez", wrapper.GetLivez)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/metrics", wrapper.GetMetrics)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/readyz", wrapper.GetReadyz)
 	})
 
@@ -281,6 +307,35 @@ func (response GetLivez503TextResponse) VisitGetLivezResponse(w http.ResponseWri
 	return err
 }
 
+type GetMetricsRequestObject struct {
+}
+
+type GetMetricsResponseObject interface {
+	VisitGetMetricsResponse(w http.ResponseWriter) error
+}
+
+type GetMetrics200TextResponse string
+
+func (response GetMetrics200TextResponse) VisitGetMetricsResponse(w http.ResponseWriter) error {
+
+	w.Header().Set("Content-Type", "text/plain")
+	w.WriteHeader(200)
+
+	_, err := w.Write([]byte(response))
+	return err
+}
+
+type GetMetrics503TextResponse string
+
+func (response GetMetrics503TextResponse) VisitGetMetricsResponse(w http.ResponseWriter) error {
+
+	w.Header().Set("Content-Type", "text/plain")
+	w.WriteHeader(503)
+
+	_, err := w.Write([]byte(response))
+	return err
+}
+
 type GetReadyzRequestObject struct {
 }
 
@@ -318,6 +373,9 @@ type StrictServerInterface interface {
 	// Liveness probe
 	// (GET /livez)
 	GetLivez(ctx context.Context, request GetLivezRequestObject) (GetLivezResponseObject, error)
+	// Prometheus metrics
+	// (GET /metrics)
+	GetMetrics(ctx context.Context, request GetMetricsRequestObject) (GetMetricsResponseObject, error)
 	// Readiness probe
 	// (GET /readyz)
 	GetReadyz(ctx context.Context, request GetReadyzRequestObject) (GetReadyzResponseObject, error)
@@ -393,6 +451,30 @@ func (sh *strictHandler) GetLivez(w http.ResponseWriter, r *http.Request) {
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(GetLivezResponseObject); ok {
 		if err := validResponse.VisitGetLivezResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetMetrics operation middleware
+func (sh *strictHandler) GetMetrics(w http.ResponseWriter, r *http.Request) {
+	var request GetMetricsRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetMetrics(ctx, request.(GetMetricsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetMetrics")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetMetricsResponseObject); ok {
+		if err := validResponse.VisitGetMetricsResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {
