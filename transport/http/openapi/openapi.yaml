@@ -1,0 +1,73 @@
+openapi: 3.0.3
+info:
+  title: ops HTTP transport
+  version: 0.1.0
+paths:
+  /livez:
+    get:
+      operationId: getLivez
+      summary: Liveness probe
+      responses:
+        "200":
+          description: OK
+          content:
+            text/plain:
+              schema:
+                type: string
+        "503":
+          description: Service unavailable
+          content:
+            text/plain:
+              schema:
+                type: string
+  /readyz:
+    get:
+      operationId: getReadyz
+      summary: Readiness probe
+      responses:
+        "200":
+          description: OK
+          content:
+            text/plain:
+              schema:
+                type: string
+        "503":
+          description: Service unavailable
+          content:
+            text/plain:
+              schema:
+                type: string
+  /healthz:
+    get:
+      operationId: getHealthz
+      summary: Health probe
+      responses:
+        "200":
+          description: OK
+          content:
+            text/plain:
+              schema:
+                type: string
+        "503":
+          description: Service unavailable
+          content:
+            text/plain:
+              schema:
+                type: string
+  /metrics:
+    get:
+      operationId: getMetrics
+      summary: Prometheus metrics
+      responses:
+        "200":
+          description: OK
+          content:
+            text/plain:
+              schema:
+                type: string
+        "503":
+          description: Service unavailable
+          content:
+            text/plain:
+              schema:
+                type: string

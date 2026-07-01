@@ -1,0 +1,40 @@
+# yaml-language-server: $schema=https://taskfile.dev/schema.json
+
+version: "3"
+
+vars:
+  DOCKER_IMAGE: golang:alpine
+
+tasks:
+  gen:
+    desc: Regenerate OpenAPI server code
+    cmds:
+      - go generate ./transport/http/openapi/...
+
+  test-u:
+    desc: Unit tests
+    cmds:
+      - |
+        docker run --rm \
+          -v "{{.USER_WORKING_DIR}}:/workspace" \
+          -w /workspace \
+          {{.DOCKER_IMAGE}} \
+          sh -c "GOWORK=off go test -v ./..."
+
+  test-m:
+    desc: Mutation tests (avito-tech/go-mutesting)
+    cmds:
+      - |
+        docker run --rm \
+          -v "{{.USER_WORKING_DIR}}:/workspace" \
+          -w /workspace \
+          {{.DOCKER_IMAGE}} \
+          sh -c "apk add --no-cache build-base git diffutils && \
+            GOWORK=off go install github.com/avito-tech/go-mutesting/cmd/go-mutesting@latest && \
+            GOWORK=off go-mutesting ./..."
+
+  test:
+    desc: All tests (unit + mutation)
+    cmds:
+      - task: test-u
+      - task: test-m
