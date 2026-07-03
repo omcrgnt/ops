@@ -4,7 +4,7 @@ Org library for application **operations surface**: probe and metrics actuators,
 
 Supersedes the experimental [actuator](https://github.com/omcrgnt/actuator) repo.
 
-Stack: `res v0.22`, `sdi v0.21`, `srv-http` (local v0.21+ with HTTPMetrics).
+Stack: `res v0.22`, `sdi v0.21`, `srv-http` (HTTPMetrics auto-registers on import).
 
 ## Layout
 
@@ -27,17 +27,20 @@ use/use.go     # unique.MustAddFixed / MustAddReplaceable
 
 ```go
 import (
-    _ "github.com/omcrgnt/srv-http/use"
-    _ "github.com/omcrgnt/ops/metrics/use"
     _ "github.com/omcrgnt/ops/transport/http/use"
+    srvhttp "github.com/omcrgnt/srv-http" // Server types; HTTPMetrics via init
 )
 
 app.Run(&appResources, app.Pipeline{Registry: unique.Global(), ...})
 ```
 
-Registers probe actuator, metrics actuator + shared `*prometheus.Registry`, ops HTTP handler, and default ops server (`DefaultServer`, `:8080`). HTTP metrics recorder: `srv-http.HTTPMetrics` via `srv-http/use` (not ops).
+One blank import registers probe actuator, metrics actuator + shared `*prometheus.Registry`, ops HTTP handler, and default ops server (`DefaultServer`, `:8080`).
 
-Optional override: `transport/http.Config` in AppResources with `ecfg` tags for ops listen port/host; materialize dedup removes the replaceable `DefaultServer`.
+Import `srv-http` for domain `Server[T]` — `HTTPMetrics` singleton registers in `unique.Global` automatically (no separate `use` package).
+
+Metrics without ops REST: `_ "github.com/omcrgnt/ops/metrics/use"` only (registry + actuator, no `/metrics` route).
+
+Optional override: `*ophttp.Server` in AppResources with `ecfg` tags (resource → `Config` spec → `*Server`); materialize dedup removes the replaceable `DefaultServer`.
 
 ## Codegen
 
