@@ -4,7 +4,7 @@ import (
 	commonv1 "github.com/omcrgnt/proto/gen/go/common/v1"
 )
 
-// Config is the non-generic ops HTTP server configuration (proto leaf types).
+// Config is the ops HTTP server spec (proto leaf types).
 // ecfg fills and protovalidates Label, Host, and Port before Build is called.
 type Config struct {
 	Label commonv1.Label
@@ -21,10 +21,9 @@ func DefaultConfig() *Config {
 	}
 }
 
-// Build returns a user ops HTTP server for res.Add and builder.Build.
-// Does not bind; srv-http listen runs lazily on SDI Resolve (see systemServer).
+// Build materializes [*Server]. Does not bind; srv-http listen runs lazily on SDI Resolve.
 func (c *Config) Build() (any, error) {
-	return &systemServer{
+	return &Server{
 		label: c.Label.GetValue(),
 		host:  c.Host.GetValue(),
 		port:  c.Port.GetValue(),

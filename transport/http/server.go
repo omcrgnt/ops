@@ -5,11 +5,13 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/omcrgnt/app"
 	commonv1 "github.com/omcrgnt/proto/gen/go/common/v1"
 	srvhttp "github.com/omcrgnt/srv-http"
 )
 
-type systemServer struct {
+// Server is the ops HTTP resource. Catalog field: *Server (Configurable); [Config] is its spec.
+type Server struct {
 	label string
 	host  string
 	port  uint32
@@ -19,18 +21,22 @@ type systemServer struct {
 	buildErr error
 }
 
+func (*Server) BuildConfig() (app.Materializer, error) {
+	return &Config{}, nil
+}
+
 // DefaultServer returns the system ops HTTP server for transport/http/use registration.
 // Bind happens lazily on first SDI Deps/Inject (before runner.Start), not in init.
 func DefaultServer() any {
 	cfg := DefaultConfig()
-	return &systemServer{
+	return &Server{
 		label: cfg.Label.GetValue(),
 		host:  cfg.Host.GetValue(),
 		port:  cfg.Port.GetValue(),
 	}
 }
 
-func (s *systemServer) ensureBuilt() {
+func (s *Server) ensureBuilt() {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -55,7 +61,7 @@ func (s *systemServer) ensureBuilt() {
 	s.inner = server
 }
 
-func (s *systemServer) Deps() []any {
+func (s *Server) Deps() []any {
 	s.ensureBuilt()
 	if s.buildErr != nil {
 		return nil
@@ -66,7 +72,7 @@ func (s *systemServer) Deps() []any {
 	return s.inner.Deps()
 }
 
-func (s *systemServer) Inject(args []any) {
+func (s *Server) Inject(args []any) {
 	s.ensureBuilt()
 	if s.buildErr != nil {
 		return
@@ -77,7 +83,7 @@ func (s *systemServer) Inject(args []any) {
 	s.inner.Inject(args)
 }
 
-func (s *systemServer) Start(ctx context.Context) error {
+func (s *Server) Start(ctx context.Context) error {
 	s.ensureBuilt()
 	if s.buildErr != nil {
 		return s.buildErr
@@ -88,7 +94,7 @@ func (s *systemServer) Start(ctx context.Context) error {
 	return s.inner.Start(ctx)
 }
 
-func (s *systemServer) Close(ctx context.Context) error {
+func (s *Server) Close(ctx context.Context) error {
 	s.mu.Lock()
 	inner := s.inner
 	s.mu.Unlock()

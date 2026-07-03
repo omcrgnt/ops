@@ -3,9 +3,21 @@ package http_test
 import (
 	"testing"
 
+	"github.com/omcrgnt/app"
 	commonv1 "github.com/omcrgnt/proto/gen/go/common/v1"
 	ophttp "github.com/omcrgnt/ops/transport/http"
 )
+
+func TestServer_BuildConfig(t *testing.T) {
+	spec, err := (&ophttp.Server{}).BuildConfig()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if spec == nil {
+		t.Fatal("expected config spec")
+	}
+	var _ app.Materializer = spec
+}
 
 func TestDefaultConfig(t *testing.T) {
 	cfg := ophttp.DefaultConfig()

@@ -4,10 +4,11 @@ go 1.26.2
 
 require (
 	github.com/go-chi/chi/v5 v5.3.0
+	github.com/omcrgnt/app v0.21.0
 	github.com/omcrgnt/proto/gen/go v0.3.0
 	github.com/omcrgnt/res v0.22.0
 	github.com/omcrgnt/sdi v0.21.0
-	github.com/omcrgnt/srv-http v0.22.0
+	github.com/omcrgnt/srv-http v0.23.0
 	github.com/prometheus/client_golang v1.23.2
 	github.com/prometheus/common v0.69.0
 )
@@ -24,7 +25,6 @@ require (
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/google/cel-go v0.28.1 // indirect
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
-	github.com/omcrgnt/app v0.21.0 // indirect
 	github.com/omcrgnt/ecfg v0.21.2 // indirect
 	github.com/omcrgnt/runner v0.21.0 // indirect
 	github.com/prometheus/client_model v0.6.2 // indirect

@@ -15,15 +15,16 @@ runner (in app)      process lifecycle
 |---------|------|
 | `probe` | Ops facade for readiness/liveness/health |
 | `metrics` | Shared Prometheus registry + contributor aggregation + Metricer |
-| `transport/http` | HTTP transport (handlers only; server via Config.Build) |
+| `transport/http` | HTTP transport (handlers; [Server] resource → [Config] spec) |
 | `srv-http` | TCP server, otel, request metrics via HTTPMetrics |
 | `res/unique` + `sdi` | registry and wiring |
 
 ## Metrics (v1)
 
 ```text
-srv-http/use         → HTTPMetrics singleton (MetricsContributor + slok Recorder)
+srv-http (init)      → HTTPMetrics singleton Fixed in unique.Global
 metrics/use          → *prometheus.Registry (Fixed) + metrics.Actuator (Replaceable)
+transport/http/use   → probe/use + metrics/use + Handler + DefaultServer
 
 Actuator.Inject:
   registry One + []MetricsContributor Many
@@ -35,6 +36,14 @@ transport/http Handler:
 ```
 
 **Org rule:** HTTP metrics live in **srv-http** (`HTTPMetrics`), not ops. Ops metrics actuator only aggregates `RegisterMetrics` and exposes scrape. Domain services may implement `MetricsContributor` for custom counters.
+
+## Import modes
+
+| Mode | Imports | Result |
+|------|---------|--------|
+| Full ops | `srv-http` + `transport/http/use` | HTTP metrics + scrape + probes |
+| Metrics only | `srv-http` + `metrics/use` | registry + actuator, no ops REST |
+| HTTP only | `srv-http` only | Server runs; recorder no-op until actuator |
 
 ## Naming (probe)
 
@@ -51,16 +60,15 @@ Transport `Handler` depends on `(*probe.Prober)(nil)` and `(*metrics.Metricer)(n
 ## Registration (`use` packages)
 
 ```text
-probe/use              → unique.MustAddReplaceable(&Actuator{})
-metrics/use            → unique.MustAddFixed(Registry) + MustAddReplaceable(&Actuator{})
-transport/http/use     → unique.MustAddFixed(&Handler{}) + MustAddReplaceable(DefaultServer())
+probe/use              → unique.MustAddReplaceable(&Actuator{})  [via transport/http/use]
+metrics/use            → unique.MustAddFixed(Registry) + MustAddReplaceable(&Actuator{})  [via transport/http/use]
+transport/http/use     → probe + metrics + Handler + DefaultServer()
+srv-http               → unique.MustAddFixed(&HTTPMetrics{}) in package init
 ```
-
-Apps also import `_ "github.com/omcrgnt/srv-http/use"` for `HTTPMetrics`.
 
 Pipeline: `app.Run(&appResources, app.Pipeline{Registry: unique.Global(), ...})`.
 
-Override ops host/port/label: optional `transport/http.Config` in AppResources with `ecfg` tags; materialize dedup removes replaceable `DefaultServer`.
+Override ops host/port/label: optional `transport/http.Server` in AppResources with `ecfg` tags (resource → `Config` spec → `*Server`); materialize dedup removes replaceable `DefaultServer`.
 
 Default ops port **8080** in `DefaultConfig()` — apps should override (e.g. `:9090`) when domain API uses `:8080`.
 
