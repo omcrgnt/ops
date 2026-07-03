@@ -2,6 +2,7 @@ package http
 
 import (
 	"context"
+	"fmt"
 	"sync"
 
 	commonv1 "github.com/omcrgnt/proto/gen/go/common/v1"
@@ -14,21 +15,8 @@ type systemServer struct {
 	port  uint32
 
 	mu       sync.Mutex
-	inner    any
+	inner    *srvhttp.Server[*Handler]
 	buildErr error
-}
-
-type depsInjector interface {
-	Deps() []any
-	Inject(args []any)
-}
-
-type starter interface {
-	Start(ctx context.Context) error
-}
-
-type closer interface {
-	Close(ctx context.Context) error
 }
 
 // DefaultServer returns the system ops HTTP server for transport/http/use registration.
@@ -59,7 +47,12 @@ func (s *systemServer) ensureBuilt() {
 		s.buildErr = err
 		return
 	}
-	s.inner = built
+	server, ok := built.(*srvhttp.Server[*Handler])
+	if !ok {
+		s.buildErr = fmt.Errorf("ops/http: Config.Build: got %T, want *srvhttp.Server[*Handler]", built)
+		return
+	}
+	s.inner = server
 }
 
 func (s *systemServer) Deps() []any {
@@ -67,11 +60,10 @@ func (s *systemServer) Deps() []any {
 	if s.buildErr != nil {
 		return nil
 	}
-	d, ok := s.inner.(depsInjector)
-	if !ok {
+	if s.inner == nil {
 		return nil
 	}
-	return d.Deps()
+	return s.inner.Deps()
 }
 
 func (s *systemServer) Inject(args []any) {
@@ -79,11 +71,10 @@ func (s *systemServer) Inject(args []any) {
 	if s.buildErr != nil {
 		return
 	}
-	d, ok := s.inner.(depsInjector)
-	if !ok {
+	if s.inner == nil {
 		return
 	}
-	d.Inject(args)
+	s.inner.Inject(args)
 }
 
 func (s *systemServer) Start(ctx context.Context) error {
@@ -91,11 +82,10 @@ func (s *systemServer) Start(ctx context.Context) error {
 	if s.buildErr != nil {
 		return s.buildErr
 	}
-	st, ok := s.inner.(starter)
-	if !ok {
+	if s.inner == nil {
 		return nil
 	}
-	return st.Start(ctx)
+	return s.inner.Start(ctx)
 }
 
 func (s *systemServer) Close(ctx context.Context) error {
@@ -106,9 +96,5 @@ func (s *systemServer) Close(ctx context.Context) error {
 	if inner == nil {
 		return nil
 	}
-	cl, ok := inner.(closer)
-	if !ok {
-		return nil
-	}
-	return cl.Close(ctx)
+	return inner.Close(ctx)
 }
