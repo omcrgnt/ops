@@ -15,9 +15,3 @@ type ProbeReadiness interface {
 type ProbeLiveness interface {
 	ProbeLive(ctx context.Context) error
 }
-
-// ProbeHealth is implemented by shared infra resources for operational health checks.
-// Same concurrency and ctx rules as ProbeReadiness apply.
-type ProbeHealth interface {
-	ProbeHealth(ctx context.Context) error
-}

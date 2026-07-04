@@ -6,7 +6,6 @@ import "context"
 type Actuator struct {
 	readiness []ProbeReadiness
 	liveness  []ProbeLiveness
-	health    []ProbeHealth
 }
 
 var _ Prober = (*Actuator)(nil)
@@ -15,7 +14,6 @@ func (a *Actuator) Deps() []any {
 	return []any{
 		([]ProbeReadiness)(nil),
 		([]ProbeLiveness)(nil),
-		([]ProbeHealth)(nil),
 	}
 }
 
@@ -26,8 +24,6 @@ func (a *Actuator) Inject(args []any) {
 			a.readiness = v
 		case []ProbeLiveness:
 			a.liveness = v
-		case []ProbeHealth:
-			a.health = v
 		}
 	}
 }
@@ -44,15 +40,6 @@ func (a *Actuator) ProbeLive(ctx context.Context) error {
 func (a *Actuator) ProbeReady(ctx context.Context) error {
 	for _, r := range a.readiness {
 		if err := r.ProbeReady(ctx); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func (a *Actuator) ProbeHealth(ctx context.Context) error {
-	for _, h := range a.health {
-		if err := h.ProbeHealth(ctx); err != nil {
 			return err
 		}
 	}

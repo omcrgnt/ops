@@ -12,14 +12,11 @@ import (
 )
 
 type mockProber struct {
-	live, ready, health error
+	live, ready error
 }
 
 func (m mockProber) ProbeLive(context.Context) error  { return m.live }
 func (m mockProber) ProbeReady(context.Context) error { return m.ready }
-func (m mockProber) ProbeHealth(context.Context) error {
-	return m.health
-}
 
 type mockMetricer struct {
 	body []byte
@@ -62,11 +59,11 @@ func TestHandler_ProbeRoutes(t *testing.T) {
 			body:   "ok",
 		},
 		{
-			name:   "healthz fail",
-			path:   "/healthz",
-			mock:   mockProber{health: errors.New("ill")},
+			name:   "readyz fail",
+			path:   "/readyz",
+			mock:   mockProber{ready: errors.New("not ready")},
 			status: http.StatusServiceUnavailable,
-			body:   "ill",
+			body:   "not ready",
 		},
 	}
 

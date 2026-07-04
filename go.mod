@@ -8,7 +8,7 @@ require (
 	github.com/omcrgnt/proto/gen/go v0.3.0
 	github.com/omcrgnt/res v0.22.0
 	github.com/omcrgnt/sdi v0.21.0
-	github.com/omcrgnt/srv-http v0.23.0
+	github.com/omcrgnt/srv-http v0.24.0
 	github.com/prometheus/client_golang v1.23.2
 	github.com/prometheus/common v0.69.0
 )
@@ -47,3 +47,5 @@ require (
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20260622175928-b703f567277d // indirect
 	google.golang.org/protobuf v1.36.11 // indirect
 )
+
+replace github.com/omcrgnt/srv-http => ../srv-http

@@ -16,10 +16,6 @@ type stubLiveness struct{ err error }
 
 func (s stubLiveness) ProbeLive(context.Context) error { return s.err }
 
-type stubHealth struct{ err error }
-
-func (s stubHealth) ProbeHealth(context.Context) error { return s.err }
-
 func TestActuator_InjectAndProbe(t *testing.T) {
 	t.Parallel()
 
@@ -27,7 +23,6 @@ func TestActuator_InjectAndProbe(t *testing.T) {
 	a.Inject([]any{
 		[]probe.ProbeReadiness{stubReadiness{}},
 		[]probe.ProbeLiveness{stubLiveness{}},
-		[]probe.ProbeHealth{stubHealth{}},
 	})
 
 	ctx := context.Background()
@@ -36,9 +31,6 @@ func TestActuator_InjectAndProbe(t *testing.T) {
 	}
 	if err := a.ProbeLive(ctx); err != nil {
 		t.Fatalf("ProbeLive: %v", err)
-	}
-	if err := a.ProbeHealth(ctx); err != nil {
-		t.Fatalf("ProbeHealth: %v", err)
 	}
 }
 
@@ -53,7 +45,6 @@ func TestActuator_EmptySlicesOK(t *testing.T) {
 	}{
 		{"ProbeLive", func() error { return a.ProbeLive(ctx) }},
 		{"ProbeReady", func() error { return a.ProbeReady(ctx) }},
-		{"ProbeHealth", func() error { return a.ProbeHealth(ctx) }},
 	} {
 		if err := fn.run(); err != nil {
 			t.Fatalf("%s: %v", fn.name, err)

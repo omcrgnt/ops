@@ -13,7 +13,7 @@ runner (in app)      process lifecycle
 
 | Package | Role |
 |---------|------|
-| `probe` | Ops facade for readiness/liveness/health |
+| `probe` | Ops facade for readiness and liveness |
 | `metrics` | Shared Prometheus registry + contributor aggregation + Metricer |
 | `transport/http` | HTTP transport (handlers; [Server] resource → [Config] spec) |
 | `srv-http` | TCP server, otel, request metrics via HTTPMetrics |
@@ -53,7 +53,8 @@ SDI matches Many/One deps by `Implements`. Probe ports use `{Actuator}{Action}` 
 |----------------|--------|-------------------|
 | `ProbeReadiness` | `ProbeReady(ctx)` | `Prober.ProbeReady(ctx)` |
 | `ProbeLiveness` | `ProbeLive(ctx)` | `Prober.ProbeLive(ctx)` |
-| `ProbeHealth` | `ProbeHealth(ctx)` | `Prober.ProbeHealth(ctx)` |
+
+Readiness implementors: domain `srv-http.Server[T]` (transport serve error). Ops HTTP wrapper does not implement `ProbeReadiness` — SDI cycle if it also depends on `Handler` → `Actuator`.
 
 Transport `Handler` depends on `(*probe.Prober)(nil)` and `(*metrics.Metricer)(nil)`.
 
@@ -74,7 +75,7 @@ Default ops port **8080** in `DefaultConfig()` — apps should override (e.g. `:
 
 ## OpenAPI
 
-- Spec: `transport/http/openapi/openapi.yaml` — `/livez`, `/readyz`, `/healthz`, `/metrics`
+- Spec: `transport/http/openapi/openapi.yaml` — `/livez`, `/readyz`, `/metrics`
 - Regenerate: `task gen`
 
 ## Backlog

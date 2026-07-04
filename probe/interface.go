@@ -6,5 +6,4 @@ import "context"
 type Prober interface {
 	ProbeLive(ctx context.Context) error
 	ProbeReady(ctx context.Context) error
-	ProbeHealth(ctx context.Context) error
 }
