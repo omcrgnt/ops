@@ -37,23 +37,6 @@ paths:
             text/plain:
               schema:
                 type: string
-  /healthz:
-    get:
-      operationId: getHealthz
-      summary: Health probe
-      responses:
-        "200":
-          description: OK
-          content:
-            text/plain:
-              schema:
-                type: string
-        "503":
-          description: Service unavailable
-          content:
-            text/plain:
-              schema:
-                type: string
   /metrics:
     get:
       operationId: getMetrics

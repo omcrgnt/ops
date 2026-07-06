@@ -62,13 +62,6 @@ func (s *strictOps) GetReadyz(ctx context.Context, _ oapi.GetReadyzRequestObject
 	return oapi.GetReadyz200TextResponse("ok"), nil
 }
 
-func (s *strictOps) GetHealthz(ctx context.Context, _ oapi.GetHealthzRequestObject) (oapi.GetHealthzResponseObject, error) {
-	if err := s.prober.ProbeHealth(ctx); err != nil {
-		return oapi.GetHealthz503TextResponse(err.Error()), nil
-	}
-	return oapi.GetHealthz200TextResponse("ok"), nil
-}
-
 func (s *strictOps) GetMetrics(ctx context.Context, _ oapi.GetMetricsRequestObject) (oapi.GetMetricsResponseObject, error) {
 	body, err := s.metricer.MetricsMetrics(ctx)
 	if err != nil {

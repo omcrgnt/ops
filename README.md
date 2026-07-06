@@ -9,7 +9,7 @@ Stack: `res v0.22`, `sdi v0.21`, `srv-http` (HTTPMetrics auto-registers on impor
 ## Layout
 
 ```text
-probe/                 # readiness / liveness / health actuator
+probe/                 # readiness / liveness actuator
 metrics/               # Prometheus registry actuator + Metricer scrape surface
 transport/http/        # OpenAPI HTTP transport + srv-http server config
 ```

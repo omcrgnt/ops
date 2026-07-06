@@ -13,9 +13,6 @@ import (
 
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
-	// Health probe
-	// (GET /healthz)
-	GetHealthz(w http.ResponseWriter, r *http.Request)
 	// Liveness probe
 	// (GET /livez)
 	GetLivez(w http.ResponseWriter, r *http.Request)
@@ -30,12 +27,6 @@ type ServerInterface interface {
 // Unimplemented server implementation that returns http.StatusNotImplemented for each endpoint.
 
 type Unimplemented struct{}
-
-// Health probe
-// (GET /healthz)
-func (_ Unimplemented) GetHealthz(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusNotImplemented)
-}
 
 // Liveness probe
 // (GET /livez)
@@ -63,20 +54,6 @@ type ServerInterfaceWrapper struct {
 }
 
 type MiddlewareFunc func(http.Handler) http.Handler
-
-// GetHealthz operation middleware
-func (siw *ServerInterfaceWrapper) GetHealthz(w http.ResponseWriter, r *http.Request) {
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.GetHealthz(w, r)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
 
 // GetLivez operation middleware
 func (siw *ServerInterfaceWrapper) GetLivez(w http.ResponseWriter, r *http.Request) {
@@ -234,9 +211,6 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	}
 
 	r.Group(func(r chi.Router) {
-		r.Get(options.BaseURL+"/healthz", wrapper.GetHealthz)
-	})
-	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/livez", wrapper.GetLivez)
 	})
 	r.Group(func(r chi.Router) {
@@ -247,35 +221,6 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 
 	return r
-}
-
-type GetHealthzRequestObject struct {
-}
-
-type GetHealthzResponseObject interface {
-	VisitGetHealthzResponse(w http.ResponseWriter) error
-}
-
-type GetHealthz200TextResponse string
-
-func (response GetHealthz200TextResponse) VisitGetHealthzResponse(w http.ResponseWriter) error {
-
-	w.Header().Set("Content-Type", "text/plain")
-	w.WriteHeader(200)
-
-	_, err := w.Write([]byte(response))
-	return err
-}
-
-type GetHealthz503TextResponse string
-
-func (response GetHealthz503TextResponse) VisitGetHealthzResponse(w http.ResponseWriter) error {
-
-	w.Header().Set("Content-Type", "text/plain")
-	w.WriteHeader(503)
-
-	_, err := w.Write([]byte(response))
-	return err
 }
 
 type GetLivezRequestObject struct {
@@ -367,9 +312,6 @@ func (response GetReadyz503TextResponse) VisitGetReadyzResponse(w http.ResponseW
 
 // StrictServerInterface represents all server handlers.
 type StrictServerInterface interface {
-	// Health probe
-	// (GET /healthz)
-	GetHealthz(ctx context.Context, request GetHealthzRequestObject) (GetHealthzResponseObject, error)
 	// Liveness probe
 	// (GET /livez)
 	GetLivez(ctx context.Context, request GetLivezRequestObject) (GetLivezResponseObject, error)
@@ -408,30 +350,6 @@ type strictHandler struct {
 	ssi         StrictServerInterface
 	middlewares []StrictMiddlewareFunc
 	options     StrictHTTPServerOptions
-}
-
-// GetHealthz operation middleware
-func (sh *strictHandler) GetHealthz(w http.ResponseWriter, r *http.Request) {
-	var request GetHealthzRequestObject
-
-	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
-		return sh.ssi.GetHealthz(ctx, request.(GetHealthzRequestObject))
-	}
-	for _, middleware := range sh.middlewares {
-		handler = middleware(handler, "GetHealthz")
-	}
-
-	response, err := handler(r.Context(), w, r, request)
-
-	if err != nil {
-		sh.options.ResponseErrorHandlerFunc(w, r, err)
-	} else if validResponse, ok := response.(GetHealthzResponseObject); ok {
-		if err := validResponse.VisitGetHealthzResponse(w); err != nil {
-			sh.options.ResponseErrorHandlerFunc(w, r, err)
-		}
-	} else if response != nil {
-		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
-	}
 }
 
 // GetLivez operation middleware
