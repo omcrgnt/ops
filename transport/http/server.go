@@ -6,9 +6,12 @@ import (
 	"sync"
 
 	"github.com/omcrgnt/app"
+	"github.com/omcrgnt/ops/probe"
 	commonv1 "github.com/omcrgnt/proto/gen/go/common/v1"
 	srvhttp "github.com/omcrgnt/srv-http"
 )
+
+var _ probe.ProbeReadiness = (*Server)(nil)
 
 // Server is the ops HTTP resource. Catalog field: *Server (Configurable); [Config] is its spec.
 type Server struct {
@@ -103,4 +106,16 @@ func (s *Server) Close(ctx context.Context) error {
 		return nil
 	}
 	return inner.Close(ctx)
+}
+
+// ProbeReady reports ops HTTP traffic readiness (delegate to inner srv-http server).
+func (s *Server) ProbeReady(ctx context.Context) error {
+	s.ensureBuilt()
+	if s.buildErr != nil {
+		return s.buildErr
+	}
+	if s.inner == nil {
+		return nil
+	}
+	return s.inner.ProbeReady(ctx)
 }

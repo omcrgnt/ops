@@ -54,7 +54,7 @@ SDI matches Many/One deps by `Implements`. Probe ports use `{Actuator}{Action}` 
 | `ProbeReadiness` | `ProbeReady(ctx)` | `Prober.ProbeReady(ctx)` |
 | `ProbeLiveness` | `ProbeLive(ctx)` | `Prober.ProbeLive(ctx)` |
 
-Readiness implementors: domain `srv-http.Server[T]` (transport serve error). Ops HTTP wrapper does not implement `ProbeReadiness` — SDI cycle if it also depends on `Handler` → `Actuator`.
+Readiness implementors: domain `srv-http.Server[T]` and ops `transport/http.Server` (transport serve error via inner delegate).
 
 Transport `Handler` depends on `(*probe.Prober)(nil)` and `(*metrics.Metricer)(nil)`.
 
