@@ -2,17 +2,20 @@ package http_test
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"reflect"
 	"testing"
+	"time"
 
 	"github.com/omcrgnt/ops/metrics"
 	"github.com/omcrgnt/ops/probe"
 	ophttp "github.com/omcrgnt/ops/transport/http"
 	"github.com/omcrgnt/res/unique"
 	"github.com/omcrgnt/sdi"
+	srvhttp "github.com/omcrgnt/srv-http"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -79,6 +82,55 @@ func TestIntegration_DefaultServerOverrideDedup(t *testing.T) {
 	}
 	if got != built {
 		t.Fatal("expected explicit Config.Build server to remain after dedup")
+	}
+}
+
+func TestIntegration_OwnEndpointNeverGated(t *testing.T) {
+	// A not-ready gate would 503 a normal srv-http server (see
+	// srvhttp.TestConfig_Build_gate) — this proves ops's own /readyz stays
+	// reachable regardless, because ensureBuilt calls DisableGate on its
+	// inner server.
+	reg := unique.New()
+
+	reg.MustAddReplaceable(&probe.Actuator{})
+	if err := reg.Add(alwaysReady{}); err != nil {
+		t.Fatal(err)
+	}
+	reg.MustAddFixed(prometheus.NewRegistry())
+	reg.MustAddReplaceable(&metrics.Actuator{})
+	reg.MustAddFixed(&srvhttp.HTTPMetrics{})
+	reg.MustAddFixed(&ophttp.Handler{})
+	reg.MustAddFixed(&fakeGate{ready: false})
+
+	const port = 18476
+	cfg := ophttp.DefaultConfig()
+	cfg.Port.Value = port
+	built, err := cfg.Build()
+	if err != nil {
+		t.Fatal(err)
+	}
+	reg.MustAddReplaceable(built)
+
+	if err := sdi.Resolve(reg); err != nil {
+		t.Fatal(err)
+	}
+
+	srv := built.(*ophttp.Server)
+	stop, err := srv.Start(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = stop(context.Background()) })
+
+	time.Sleep(50 * time.Millisecond)
+
+	resp, err := http.Get(fmt.Sprintf("http://127.0.0.1:%d/readyz", port))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		t.Errorf("status = %d, want %d (gate must not block ops's own endpoint)", resp.StatusCode, http.StatusOK)
 	}
 }
 

@@ -33,6 +33,21 @@ func TestServer_ProbeReady_delegates(t *testing.T) {
 	}
 }
 
+func TestServer_LastStart_isMarkerOnly(t *testing.T) {
+	// LastStart has no body — its only role is the runner.LastStarter duck
+	// type Runner.Run checks for. This just pins that it exists and is
+	// callable without panicking, in case a future edit gives it real work.
+	(&ophttp.Server{}).LastStart()
+}
+
+// fakeGate satisfies srvhttp.Server's gate dependency (Ready() bool) —
+// every registry using srvhttp.Server (ops's inner server included) must
+// supply one; this org never uses srv-http without runner.Gate in a real
+// deployment, only in isolated tests like this one.
+type fakeGate struct{ ready bool }
+
+func (g *fakeGate) Ready() bool { return g.ready }
+
 func TestServer_SDIResolve_withActuatorCycle(t *testing.T) {
 	reg := unique.New()
 
@@ -41,6 +56,7 @@ func TestServer_SDIResolve_withActuatorCycle(t *testing.T) {
 	reg.MustAddReplaceable(&metrics.Actuator{})
 	reg.MustAddFixed(&srvhttp.HTTPMetrics{})
 	reg.MustAddFixed(&ophttp.Handler{})
+	reg.MustAddFixed(&fakeGate{})
 
 	cfg := ophttp.DefaultConfig()
 	cfg.Port.Value = 0

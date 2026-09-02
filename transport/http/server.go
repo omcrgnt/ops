@@ -61,6 +61,12 @@ func (s *Server) ensureBuilt() {
 		s.buildErr = fmt.Errorf("ops/http: Config.Build: got %T, want *srvhttp.Server[*Handler]", built)
 		return
 	}
+	// ops's own readiness endpoint must never be gated: it would otherwise
+	// mask its own status behind a blanket 503 while some other LastStarter
+	// is still finishing, and gate-checking business traffic is the whole
+	// point this Server was made a LastStarter to eventually enable — not
+	// something ops's own probe traffic should be subject to.
+	server.DisableGate()
 	s.inner = server
 }
 
@@ -86,27 +92,22 @@ func (s *Server) Inject(args []any) {
 	s.inner.Inject(args)
 }
 
-func (s *Server) Start(ctx context.Context) error {
+func (s *Server) Start(ctx context.Context) (func(context.Context) error, error) {
 	s.ensureBuilt()
 	if s.buildErr != nil {
-		return s.buildErr
+		return nil, s.buildErr
 	}
 	if s.inner == nil {
-		return nil
+		return nil, nil
 	}
 	return s.inner.Start(ctx)
 }
 
-func (s *Server) Close(ctx context.Context) error {
-	s.mu.Lock()
-	inner := s.inner
-	s.mu.Unlock()
-
-	if inner == nil {
-		return nil
-	}
-	return inner.Close(ctx)
-}
+// LastStart marks Server as a runner.LastStarter (duck-typed; no runner
+// import): readiness checks served here read state that other Starters
+// write during their own Start, so this must run only once every other
+// Starter's Start has returned.
+func (s *Server) LastStart() {}
 
 // ProbeReady reports ops HTTP traffic readiness (delegate to inner srv-http server).
 func (s *Server) ProbeReady(ctx context.Context) error {
