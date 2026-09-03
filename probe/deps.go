@@ -4,8 +4,7 @@ import "context"
 
 // ProbeReadiness is implemented by shared infra resources checked for traffic readiness
 // (e.g. one db pool per app — not per repository). Must respect ctx cancellation.
-// If parallel aggregation is enabled in the future, ProbeReady may run concurrently
-// with other implementors; document whether the receiver is concurrency-safe.
+// v1 calls implementors sequentially (see Actuator.ProbeReady).
 type ProbeReadiness interface {
 	ProbeReady(ctx context.Context) error
 }

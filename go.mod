@@ -8,7 +8,7 @@ require (
 	github.com/omcrgnt/proto/gen/go v0.3.0
 	github.com/omcrgnt/res v0.22.0
 	github.com/omcrgnt/sdi v0.22.0
-	github.com/omcrgnt/srv-http v0.24.0
+	github.com/omcrgnt/srv-http v0.25.0
 	github.com/prometheus/client_golang v1.23.2
 	github.com/prometheus/common v0.69.0
 )
