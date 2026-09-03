@@ -25,19 +25,27 @@ func (a *Actuator) Deps() []any {
 }
 
 func (a *Actuator) Inject(args []any) {
+	// Two passes, not one: sdi builds args in Deps()'s declared order
+	// (*prometheus.Registry, then []MetricsContributor) and preserves it
+	// into this call, but nothing enforces that order stays that way if
+	// Deps() ever gets reordered — collecting both values first, then
+	// acting, means Inject no longer depends on which one args puts first.
+	var contributors []MetricsContributor
 	for _, arg := range args {
 		switch v := arg.(type) {
 		case *prometheus.Registry:
 			a.reg = v
 		case []MetricsContributor:
-			if a.reg == nil {
-				continue
-			}
-			for _, c := range v {
-				if err := c.RegisterMetrics(a.reg); err != nil {
-					panic(fmt.Sprintf("metrics: RegisterMetrics: %v", err))
-				}
-			}
+			contributors = v
+		}
+	}
+
+	if a.reg == nil {
+		panic("metrics: Actuator.Inject: no *prometheus.Registry resolved — Deps() declares it required")
+	}
+	for _, c := range contributors {
+		if err := c.RegisterMetrics(a.reg); err != nil {
+			panic(fmt.Sprintf("metrics: RegisterMetrics: %v", err))
 		}
 	}
 }
